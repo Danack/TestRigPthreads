@@ -1,88 +1,86 @@
 <?php
 
-$crash = true;
 
 
-function simplestAutoloader($className) {
+$setupCrash = true;
+$mainThreadStillRunning = true;
 
-    echo "Loading class: ".$className."\n";
 
-    require $className.".php";
-}
+require "bootstrap.php";
+require "simplestAutoloader.php";
 
+
+//$shareMode = PTHREADS_INHERIT_NONE;
+//$shareMode = PTHREADS_INHERIT_FUNCTIONS
+$shareMode = PTHREADS_INHERIT_ALL;
 
 spl_autoload_register('simplestAutoloader');
 
 
-
 class TestWorker extends \Worker {
 
-    public function __construct() {
+    var $shareMode;
+    
+    public function __construct($shareMode) {
+        $this->shareMode = $shareMode;
     }
 
     public function run() {
+        
+        echo "Start worker run\n";
+
+        if (($this->shareMode & PTHREADS_INHERIT_INCLUDES) == 0){
+            if (($this->shareMode & PTHREADS_INHERIT_CONSTANTS) == 0){
+                require "bootstrap.php";
+            }
+        }
+
+        if (($this->shareMode & PTHREADS_INHERIT_FUNCTIONS) == 0){ 
+            require "simplestAutoloader.php";
+        }
         spl_autoload_register('simplestAutoloader');
+        
+        echo "Running: \n";
     }
 }
 
 
 class TestTask extends \Stackable {
 
-    var $started = false;
-    var $finished = false;
-    
     public function getWorker() {
         return $this->worker;
     }
 
     public function __construct() {
-        
-        $this->started = false;
-        $this->finished = false;
     }
 
     public function run() {
-        $this->started = true;
-        echo "Run TestTask\n";
 
+        echo "Run TestTask".NL;
+
+        sleep(1);
+        
         echo "Creating class2 - which loads interface\n";
         $this->testClass = new TestClass2();
 
-        $this->testClass->foo();
-        
-        $this->finished = true;
-        
-        //echo "about to sync in run\n";
-        $this->synchronized(function(){    
-            //echo "This notify\n";
-            $this->notify();
-        });
-        
-        
     }
 }
 
 
-if ($crash == true) {
+if ($setupCrash == true) {
     echo "Creating class1 - which loads interface\n";
     $class1 = new TestClass1();
 }
 
-$worker = new TestWorker();
-$worker->start();
+$worker = new TestWorker($shareMode);
+$worker->start($shareMode);
 
 $testTask = new TestTask();
 $worker->stack($testTask);
 
-
-$testTask->synchronized(function($runningTestTask){
-
-    if (!$runningTestTask->finished) {
-      //  echo "Doing wait in synchronized.\n";
-        $runningTestTask->wait();
-    }
-    //echo "Done?<br/>";
-}, $testTask);
+if ($mainThreadStillRunning) {
+    sleep(2);
+}
 
 
 
