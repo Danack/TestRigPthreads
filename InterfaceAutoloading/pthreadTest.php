@@ -50,13 +50,15 @@ class TestTask extends \Stackable {
 
         $this->testClass->foo();
         
+        $this->finished = true;
+        
         //echo "about to sync in run\n";
-        $this->synchronized(function(){
+        $this->synchronized(function(){    
             //echo "This notify\n";
             $this->notify();
         });
         
-        $this->finished = true;
+        
     }
 }
 
@@ -75,7 +77,7 @@ $worker->stack($testTask);
 
 $testTask->synchronized(function($runningTestTask){
 
-    if (!$runningTestTask->finished == false) {
+    if (!$runningTestTask->finished) {
       //  echo "Doing wait in synchronized.\n";
         $runningTestTask->wait();
     }
