@@ -40,9 +40,9 @@ class TestTask extends \Stackable {
 
     public function run() {
         $this->started = true;
-        echo "Run TestTask\n";
+        echo "\nRun TestTask\n";
 
-        echo "About to crash?\n";
+        echo "\nAbout to crash?\n";
         $this->testClass = new TestClass2();
 
         $this->testClass->foo();
@@ -69,6 +69,8 @@ $worker = new TestWorker();
 $worker->start();
 
 $testTask = new TestTask();
+
+echo "\nworker->stack\n";
 $worker->stack($testTask);
 
 
